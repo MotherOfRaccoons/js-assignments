@@ -28,7 +28,60 @@
  *   'NULL'      => false 
  */
 function findStringInSnakingPuzzle(puzzle, searchStr) {
-    throw new Error('Not implemented');
+    puzzle.forEach(elem => elem = elem.split(''));
+
+    function getNeighbours(point) {
+        const neighbours = [];
+
+        if (point.i != 0) {
+            neighbours.push({i: point.i - 1, j: point.j});
+        }
+        if (point.j != 0) {
+            neighbours.push({i: point.i, j: point.j - 1});
+        }
+        if (point.i != puzzle.length - 1) {
+            neighbours.push({i: point.i + 1, j: point.j});
+        }
+        if (point.j != puzzle[0].length - 1) {
+            neighbours.push({i: point.i, j: point.j + 1});
+        }
+
+        return neighbours;
+    }
+
+    function isSnakingString(point, string, trace) {
+        if (string == '') {
+            return true;
+        }
+
+        const neighbours = getNeighbours(point);
+        let newTrace = trace;
+        newTrace.push(point);
+        for (let neighb of neighbours) {
+            if (puzzle[neighb.i][neighb.j] == string[0] &&
+                trace.find(elem => elem.i == neighb.i && elem.j == neighb.j) == undefined &&
+                isSnakingString(neighb, string.slice(1), newTrace))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    const headCandidates = [];
+    for (let i = 0; i < puzzle.length; i++) {
+        for (let j = 0; j < puzzle[0].length; j++) {
+            if (puzzle[i][j] == searchStr[0]) {
+                headCandidates.push({i: i, j: j});
+            }
+        }
+    }
+    for (let candidate of headCandidates) {
+        if (isSnakingString(candidate, searchStr.slice(1), [])) {
+            return true;
+        }
+    }
+    return false;
 }
 
 
@@ -45,7 +98,29 @@ function findStringInSnakingPuzzle(puzzle, searchStr) {
  *    'abc' => 'abc','acb','bac','bca','cab','cba'
  */
 function* getPermutations(chars) {
-    throw new Error('Not implemented');
+    function permute(chars) {
+        if (chars.length == 1) {
+            return chars;
+        } else if (chars.length == 2) {
+            return [chars, chars[1] + chars[0]];
+        } else {
+            const permutations = [];
+            chars.split('').forEach(
+                function (char, index, array) {
+                    let sub = [].concat(array);
+                    sub.splice(index, 1);
+                    permute(sub.join('')).forEach(
+                        function (permutation) {
+                            permutations.push(char + permutation);
+                        });
+                });
+            return permutations;
+        }
+    }
+
+    for (let permutation of permute(chars)) {
+        yield permutation;
+    }
 }
 
 
@@ -65,7 +140,21 @@ function* getPermutations(chars) {
  *    [ 1, 6, 5, 10, 8, 7 ] => 18  (купить по 1,6,5 и затем продать все по 10)
  */
 function getMostProfitFromStockQuotes(quotes) {
-    throw new Error('Not implemented');
+    let profit = 0;
+    let i = quotes.length;
+
+    while (--i && quotes[i] < quotes[i - 1]) {
+        quotes.pop();
+    }
+    while (quotes.length) {
+        const higher = quotes.reduce((higher, elem, index) => higher = elem > quotes[higher] ? index : higher, 0);
+        for (i = 0; i < higher; i++) {
+            profit += quotes[higher] - quotes[i];
+        }
+        quotes = quotes.slice(higher + 1);
+    }
+
+    return profit;
 }
 
 
@@ -90,15 +179,48 @@ function UrlShortener() {
 }
 
 UrlShortener.prototype = {
+    encode: function (url) {
+        let key = urlStorage.store(url);
 
-    encode: function(url) {
-        throw new Error('Not implemented');
+        if (!key) {
+            return this.urlAllowedChars[0];
+        }
+        const short = [];
+        const base = this.urlAllowedChars.length;
+        while (key) {
+            short.push(this.urlAllowedChars[key % base]);
+            key /= base;
+        }
+        return short.reverse().join('');
     },
-    
-    decode: function(code) {
-        throw new Error('Not implemented');
-    } 
+
+    decode: function (short) {
+        const base = this.urlAllowedChars.length;
+        let key = 0;
+        for (let char of short) {
+            key = key * base + this.urlAllowedChars.indexOf(char);
+        }
+        return urlStorage.access(key);
+    }
 }
+
+function UrlStorage() {
+   this.urls = new Map();
+   this.key = 0;
+}
+
+UrlStorage.prototype = {
+   store: function (url) {
+       this.urls.set(this.key, url);
+       return this.key++;
+   },
+
+   access: function (key) {
+       return this.urls.get(key);
+   }
+};
+
+const urlStorage = new UrlStorage();
 
 
 module.exports = {
